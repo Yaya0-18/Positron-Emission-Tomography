@@ -1,0 +1,4 @@
+/home/yaya/PET-detector/build/CMakeFiles/edit_cache.dir
+/home/yaya/PET-detector/build/CMakeFiles/Simulation.dir
+/home/yaya/PET-detector/build/CMakeFiles/rebuild_cache.dir
+/home/yaya/PET-detector/build/CMakeFiles/PET.dir

@@ -8,11 +8,10 @@ MyDetectorConstruction::MyDetectorConstruction()
 
     fMessenger->DeclareProperty("nCols", nCols, "Number of columns");
     fMessenger->DeclareProperty("nRows", nRows, "Number of rows");
-    fMessenger->DeclareProperty("isCherenkov", isCherenkov, "Construct Cherenkov detector");
-
+    
     DefineMaterial();
 
-    isCherenkov = true;
+    isScintillator = true;
 
     //define the size of world volume 
         //determine the dimension for x y and z
@@ -80,30 +79,95 @@ void MyDetectorConstruction::DefineMaterial()
                 worldMat->SetMaterialPropertiesTable(mptWorld);
 
 
+//NaI
+        //Defining the NaI Material
+            //Defining the Elements fo the material 
+                Na = nist->FindOrBuildElement("Na");
+                I  = nist->FindOrBuildElement("I");
+            //Creating the material 
+                NaI = new G4Material("NaI",3.67*g/cm3 , 2);
+                NaI->AddElement(Na,1);
+                NaI->AddElement(I,1);
+
+        //Adding the optical parameter to the material
+
+            //Defining parameters
+                G4double rindexNaI[2]= {1.893,1.893};
+                G4double fraction[2] ={1.0,1.0};
+
+            //Add refractive index to the material
+                G4MaterialPropertiesTable *mptNaI = new G4MaterialPropertiesTable();
+                mptNaI->AddProperty("RINDEX",energy,rindexNaI,2);
+                //it tells how many photons per each wavelength we created
+                mptNaI->AddProperty("SCINTILLATIONCOMPONENT1",energy,fraction,2);
+                //tell us how many photon per energy loss of the particle we create
+                mptNaI->AddConstProperty("SCINTILLATIONYIELD",38./keV);
+                mptNaI->AddConstProperty("RESOLUTIONSCALE" ,1.0);
+                //when particle loses energy in scintillator then the photon emitted to the exp func 
+                mptNaI->AddConstProperty("SCINTILLATIONTIMECONSTANT1",250*ns);
+                //This have something to do with the distribution of the photon
+                mptNaI->AddConstProperty("SCINTILLATIONYIELD1",1.);
+                
+                NaI->SetMaterialPropertiesTable(mptNaI);
+
+    //Mirror
+
+        //Defining parameters
+                G4double reflectivity[2]= {1.0,1.0};
+        //Creating the material 
+            mirrorSurface = new G4OpticalSurface("mirrorSurface");
+        //add extras to mirror type ,finish and mYodel
+            mirrorSurface->SetType(dielectric_metal);
+            mirrorSurface->SetFinish(ground);
+            mirrorSurface->SetModel(unified);
+            //Add material proprties table 
+                G4MaterialPropertiesTable *mptMirror = new G4MaterialPropertiesTable();
+                // says what is the fraction of the light already reflected
+                mptMirror->AddProperty("REFLECTIVITY",energy ,reflectivity,2);
+
+                mirrorSurface->SetMaterialPropertiesTable(mptMirror);
+
+
 }
 
-void MyDetectorConstruction::ConstructCherenkove()
+void MyDetectorConstruction::ConstructScintillator()
 {
-       //Creating the radiator (the optical detector)
-        solidRadiator = new G4Box("solidRadiator",0.4*m,0.4*m,0.01*m);
-        logicRadiator = new G4LogicalVolume(solidRadiator,Aerogel,"logicalRadiator");
-        fScoringVolume = logicRadiator;
-        physRadiator = new G4PVPlacement(0,G4ThreeVector(0.,0.,0.25*m),logicRadiator,"physRadiator",logicWorld,false,0,true);
+    solidScintillator = new G4Box("solidScintillator",5*cm,5*cm,6*cm);
+    logicScintillator = new G4LogicalVolume(solidScintillator , NaI ,"logicScintillator");
+    G4LogicalSkinSurface *skin = new G4LogicalSkinSurface("skin",logicWorld ,mirrorSurface);
+    //creating the detector 
+    solidDetector = new G4Box("solidDetector", 1*cm , 5*cm , 6*cm);
+    logicDetector = new G4LogicalVolume(solidDetector,worldMat,"logicDetector");
 
-    //Create the photon sensors /detector
-        //First we define each detector how it looks like 
+    fScoringVolume = logicScintillator;
+    for(G4int i=0 ; i <6 ; i++)
+    {
+        
 
-        solidDetector = new G4Box("solidDetector",xWorld/nRows,yWorld/nCols,0.01*m);
-        //sensitive volume have to refer to this logical volume so we need to access it outside this constructor 
-        logicDetector = new G4LogicalVolume(solidDetector,worldMat,"logicDetector");
-        //Defining physical volume by for loop
-        for(G4int i = 0; i < nRows ;i++)
-        {
-            for(G4int j = 0 ; j < nCols ; j++)
-            {
-                physDetector = new G4PVPlacement(0,G4ThreeVector(-0.5*m+(i+0.5)*m/nRows,-0.5*m+(j+0.5)*m/nCols,0.49*m),logicDetector,"physDetector",logicWorld,false ,j+i*nCols,true);
-            } 
+        for(G4int j = 0 ; j <16 ; j++)
+        {   
+            //Scintillators
+                //We create rotations now 
+                G4Rotate3D rotZ(j*22.5*deg, G4ThreeVector(0,0,1));
+                G4Translate3D transXScint(G4ThreeVector(5./tan(22.5/2*deg)*cm +5.*cm ,0*cm,-40*cm +i*15*cm));
+                
+                //Now combine rotation and translation 
+                G4Transform3D transformScint = (rotZ)*(transXScint);
+
+            physScintillator  = new G4PVPlacement(transformScint,logicScintillator,"physScintillator",logicWorld , false , 0 , true);
+
+            //Detectors
+                G4Translate3D transXDet(G4ThreeVector(5./tan(22.5/2*deg)*cm +6.*cm +5.*cm,0*cm,-40*cm +i*15*cm));
+                //Now combine rotation and translation 
+                G4Transform3D transformDet= (rotZ)*(transXDet);
+
+
+            physDetector = new G4PVPlacement(transformDet,logicDetector,"physDetector",logicWorld , false , 0 , true);
+
         }
+    }
+        
+
 }
 
 G4VPhysicalVolume *MyDetectorConstruction::Construct()
@@ -117,8 +181,8 @@ G4VPhysicalVolume *MyDetectorConstruction::Construct()
         logicWorld = new G4LogicalVolume(solidWorld,worldMat,"logicWorld");
         physWorld = new G4PVPlacement(0,G4ThreeVector(0.,0.,0.),logicWorld,"physWorld",0,false,0,true);
 
-    if(isCherenkov)
-        ConstructCherenkove();
+    if(isScintillator)
+        ConstructScintillator();
 
     return physWorld;
 }

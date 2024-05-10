@@ -1,4 +1,0 @@
-/home/yaya/Cherenkov-detector/mtbuild/CMakeFiles/rebuild_cache.dir
-/home/yaya/Cherenkov-detector/mtbuild/CMakeFiles/edit_cache.dir
-/home/yaya/Cherenkov-detector/mtbuild/CMakeFiles/Simulation.dir
-/home/yaya/Cherenkov-detector/mtbuild/CMakeFiles/Cherenkov.dir

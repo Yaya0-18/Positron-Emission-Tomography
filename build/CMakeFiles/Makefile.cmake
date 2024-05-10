@@ -114,5 +114,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/Simulation.dir/DependInfo.cmake"
-  "CMakeFiles/Cherenkov.dir/DependInfo.cmake"
+  "CMakeFiles/PET.dir/DependInfo.cmake"
   )
